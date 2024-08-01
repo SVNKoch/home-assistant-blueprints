@@ -1,0 +1,261 @@
+blueprint:
+  name: EnOcean PTM 215Z (Friends of Hue) switch Controller
+  description: |
+    Controller automation for executing press/hold/release actions triggered by [EnOcean PTM 215Z (Friends of Hue) switch](https://www.zigbee2mqtt.io/devices/PTM_215Z.html).
+
+    **Make sure that 'Elapsed' is enabled in the z2m advanced settings.**
+
+    Blueprint inspired by [vandalon](https://community.home-assistant.io/t/zigbee2mqtt-enocean-ptm-215z-friends-of-hue-switch/429770) 💙
+  source_url: https://gist.github.com/SVNKoch/4e4f244cdb1dac6f1eaa6f943bd4483a
+  domain: automation
+  homeassistant:
+    min_version: "2024.6.0"
+  input:
+    settings:
+      name: General Settings
+      icon: mdi:cog
+      input:
+        base_topic:
+          name: (Zigbee2MQTT) Base mqtt topic
+          description: The base topic as configured in z2m
+          default: zigbee2mqtt
+        controller:
+          name: (Zigbee2MQTT) Controller Name
+          description: The name of the controller as defined in z2m (e.g. Livingroom Switch)
+          default: ""
+        hold_delay:
+          name: Hold delay
+          description: If the button has been held more than the configured Hold delay, the corresponding held action is triggered.
+          default: 500
+          selector:
+            number:
+              min: 100.0
+              max: 1000.0
+              unit_of_measurement: milliseconds
+              mode: box
+              step: 10.0
+    button_1:
+      name: Top Left Button Actions
+      icon: mdi:arrow-top-left-thick
+      description: Actions for top left button (Button 1)
+      input:
+        button_1_pressed:
+          name: Button 1 Pressed
+          default: []
+          selector:
+            action: {}
+        button_1_held:
+          name: Button 1 Held
+          default: []
+          selector:
+            action: {}
+        button_1_released:
+          name: Button 1 Released
+          default: []
+          selector:
+            action: {}
+    button_2:
+      name: Bottom Left Button Actions
+      icon: mdi:arrow-bottom-left-thick
+      description: Actions for bottom left button (Button 2)
+      input:
+        button_2_pressed:
+          name: Button 2 Pressed
+          default: []
+          selector:
+            action: {}
+        button_2_held:
+          name: Button 2 Held
+          default: []
+          selector:
+            action: {}
+        button_2_released:
+          name: Button 2 Released
+          default: []
+          selector:
+            action: {}
+    button_3:
+      name: Top Right Button Actions
+      icon: mdi:arrow-top-right-thick
+      description: Actions for top right button (Button 3)
+      input:
+        button_3_pressed:
+          name: Button 3 Pressed
+          default: []
+          selector:
+            action: {}
+        button_3_held:
+          name: Button 3 Held
+          default: []
+          selector:
+            action: {}
+        button_3_released:
+          name: Button 3 Released
+          default: []
+          selector:
+            action: {}
+    button_4:
+      name: Bottom Right Button Actions
+      icon: mdi:arrow-bottom-right-thick
+      description: Actions for bottom right button (Button 4)
+      input:
+        button_4_pressed:
+          name: Button 4 Pressed
+          default: []
+          selector:
+            action: {}
+        button_4_held:
+          name: Button 4 Held
+          default: []
+          selector:
+            action: {}
+        button_4_released:
+          name: Button 4 Released
+          default: []
+          selector:
+            action: {}
+    button_1_and_3:
+      name: Top Both Buttons Actions
+      icon: mdi:arrow-up-thick
+      description: Actions for top both buttons (Buttons 1 and 3)
+      input:
+        button_1_and_3_pressed:
+          name: Buttons 1 and 3 Pressed
+          default: []
+          selector:
+            action: {}
+        button_1_and_3_held:
+          name: Buttons 1 and 3 Held
+          default: []
+          selector:
+            action: {}
+        button_1_and_3_released:
+          name: Buttons 1 and 3 Released
+          default: []
+          selector:
+            action: {}
+    button_2_and_4:
+      name: Bottom Both Buttons Actions
+      icon: mdi:arrow-down-thick
+      description: Actions for bottom both buttons (Buttons 2 and 4)
+      input:
+        button_2_and_4_pressed:
+          name: Buttons 2 and 4 Pressed
+          default: []
+          selector:
+            action: {}
+        button_2_and_4_held:
+          name: Buttons 2 and 4 Held
+          default: []
+          selector:
+            action: {}
+        button_2_and_4_released:
+          name: Buttons 2 and 4 Released
+          default: []
+          selector:
+            action: {}
+    other:
+      name: Other Settings
+      icon: mdi:traffic-cone
+      description: Other configurations
+      input:
+        hold_timeout:
+          name: Hold Timeout
+          description: |
+            Time in milliseconds when a hold is not considered a long press anymore<br>
+            To prevent lost release signals leading to long presses next time
+
+            Should be larger than the set value for `Hold delay`
+            
+            **Set to `0` to disable (default)**
+          default: 0
+          selector:
+            number:
+              min: 0.0
+              max: 60000.0
+              unit_of_measurement: milliseconds
+              mode: box
+              step: 100.0
+        press_energy_bar:
+          name: Press Energy Bar
+          default: []
+          selector:
+            action: {}
+mode: restart
+max_exceeded: silent
+variables:
+  hold_delay: !input "hold_delay"
+  hold_timeout: !input "hold_timeout"
+trigger_variables:
+  base_topic: !input "base_topic"
+  controller: !input "controller"
+trigger:
+  - platform: mqtt
+    topic: "{{ base_topic ~ '/' ~ controller }}"
+condition:
+  - condition: template
+    value_template: >
+      {{
+        ('release_' in trigger.payload_json.action and trigger.payload_json.elapsed is defined)
+        or 'press_' in trigger.payload_json.action
+      }}
+action:
+  - variables:
+      controller: !input "controller"
+      command: '{{ trigger.payload_json.action }}'
+      time_since_last_command: '{{ trigger.payload_json.elapsed }}'
+
+  - choose:
+      - conditions: '{{ "release_" in command and (time_since_last_command | int < hold_delay or (hold_timeout != 0 and time_since_last_command | int > hold_timeout)) }}'
+
+        sequence:
+          - choose:
+              - conditions: '{{ command == "release_1" }}'
+                sequence: !input "button_1_pressed"
+              - conditions: '{{ command == "release_2" }}'
+                sequence: !input "button_2_pressed"
+              - conditions: '{{ command == "release_3" }}'
+                sequence: !input "button_3_pressed"
+              - conditions: '{{ command == "release_4" }}'
+                sequence: !input "button_4_pressed"
+              - conditions: '{{ command == "release_1_and_3" }}'
+                sequence: !input "button_1_and_3_pressed"
+              - conditions: '{{ command == "release_2_and_4" }}'
+                sequence: !input "button_2_and_4_pressed"
+
+      - conditions: '{{ "press_" | string in command }}'
+        sequence:
+          - delay:
+              milliseconds: !input "hold_delay"
+          - choose:
+              - conditions: '{{ command == "press_1" }}'
+                sequence: !input "button_1_held"
+              - conditions: '{{ command == "press_2" }}'
+                sequence: !input "button_2_held"
+              - conditions: '{{ command == "press_3" }}'
+                sequence: !input "button_3_held"
+              - conditions: '{{ command == "press_4" }}'
+                sequence: !input "button_4_held"
+              - conditions: '{{ command == "press_1_and_3" }}'
+                sequence: !input "button_1_and_3_held"
+              - conditions: '{{ command == "press_2_and_4" }}'
+                sequence: !input "button_2_and_4_held"
+              - conditions: '{{ command == "press_energy_bar" }}'
+                sequence: !input "press_energy_bar"
+
+      - conditions: '{{ "release_" in command and time_since_last_command | int > hold_delay }}'
+        sequence:
+          - choose:
+              - conditions: '{{ command == "release_1" }}'
+                sequence: !input "button_1_released"
+              - conditions: '{{ command == "release_2" }}'
+                sequence: !input "button_2_released"
+              - conditions: '{{ command == "release_3" }}'
+                sequence: !input "button_3_released"
+              - conditions: '{{ command == "release_4" }}'
+                sequence: !input "button_4_released"
+              - conditions: '{{ command == "release_1_and_3" }}'
+                sequence: !input "button_1_and_3_released"
+              - conditions: '{{ command == "release_2_and_4" }}'
+                sequence: !input "button_2_and_4_released"
+
