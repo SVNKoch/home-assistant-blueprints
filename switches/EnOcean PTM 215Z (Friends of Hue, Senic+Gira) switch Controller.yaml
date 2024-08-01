@@ -6,7 +6,7 @@ blueprint:
     **Make sure that 'Elapsed' is enabled in the z2m advanced settings.**
 
     Blueprint inspired by [vandalon](https://community.home-assistant.io/t/zigbee2mqtt-enocean-ptm-215z-friends-of-hue-switch/429770) 💙
-  source_url: https://gist.github.com/SVNKoch/4e4f244cdb1dac6f1eaa6f943bd4483a
+  source_url: https://github.com/SVNKoch/home-assistant-blueprints/blob/main/switches/EnOcean%20PTM%20215Z%20(Friends%20of%20Hue%2C%20Senic%2BGira)%20switch%20Controller.yaml
   domain: automation
   homeassistant:
     min_version: "2024.6.0"
